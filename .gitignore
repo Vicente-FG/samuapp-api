@@ -1,0 +1,43 @@
+# Dependencias y entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Datos de runtime: el historico de predicciones es local y no se versiona
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Artefactos de DEMOSTRACION generados por scripts/entrenar_modelo_demo.py.
+# Los artefactos reales (modelos/) SI se versionan.
+modelos-demo/
+
+# Variables de entorno (NUNCA subir credenciales)
+.env
+.env.*
+!.env.example
+
+# Editores y sistema operativo
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# NOTA: los artefactos del modelo (modelos/*.joblib) SI se versionan,
+# conforme a la suposicion S1 del diseño: son artefactos inmutables y
+# reproducibles del entrenamiento.

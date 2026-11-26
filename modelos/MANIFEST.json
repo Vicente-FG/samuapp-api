@@ -1,0 +1,26 @@
+{
+  "model_version": "lgb_es_fatal_1_26M@2026-08-22",
+  "artifact_version": "encodings@2026-08-22",
+  "artefactos": {
+    "lgb_es_fatal_1_26M.joblib": {
+      "sha256": "a4de29ff4ac86a8942518a007bb38d7e88a945bdf394e6c7ba130c76f4d40b7e",
+      "bytes": 675700
+    },
+    "lgb_victimas_graves_1_26M.joblib": {
+      "sha256": "520af81825dc3faea885ca5f709b15401c28e6483709fdc151494d0f0d4e7290",
+      "bytes": 565680
+    },
+    "features_xgb.joblib": {
+      "sha256": "16f0225ba3f78da9e68624ef6fb51842c0c7dd21589680617760bbfafdfd58f7",
+      "bytes": 639
+    },
+    "encodings.parquet": {
+      "sha256": "443c45e122e1804733994d77250c3ea90da2c9631c23db79eed8fab61e5a5932",
+      "bytes": 11500
+    },
+    "tasa_global.json": {
+      "sha256": "2573fe7fef3b91153fffb6a899254b8cdd7705ac715bed5b620baa5c6486255d",
+      "bytes": 95
+    }
+  }
+}

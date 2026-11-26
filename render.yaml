@@ -1,0 +1,31 @@
+# Configuracion del servicio web de SAMUAPP en Render.
+# El backend reemplaza a las Cloud Functions: web service Python nativo, sin Docker.
+services:
+  - type: web
+    name: samuapp-backend
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn adapters.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    autoDeploy: false
+    envVars:
+      - key: SAMUAPP_MODELOS_DIR
+        value: ./modelos/
+      - key: SAMUAPP_DB_PATH
+        value: ./data/predicciones.db
+      - key: SAMUAPP_AUTH_MODE
+        value: firebase
+      - key: SAMUAPP_MODO_DEGRADADO
+        value: "false"
+      - key: SAMUAPP_TIMEOUT_MS
+        value: "2000"
+      - key: SAMUAPP_VERSION_CODIGO
+        value: 0.1.0
+      - key: SAMUAPP_LOG_LEVEL
+        value: INFO
+      - key: SAMUAPP_CORS_ORIGENES
+        value: ""
+      - key: PYTHON_VERSION
+        value: "3.12.10"

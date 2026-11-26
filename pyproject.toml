@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "samuapp-backend"
+version = "0.1.0"
+description = "Backend REST de SAMUAPP: Sistema Predictivo de la Siniestralidad Vial en Chile"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.1",
+    "joblib==1.4.2",
+    "scikit-learn==1.6.0",
+    "pandas==2.2.3",
+    "pyarrow==19.0.0",
+    "numpy==2.2.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.4", "httpx==0.28.1"]
+firebase = ["firebase-admin>=6.5.0"]
+
+[tool.setuptools]
+packages = ["adapters", "adapters.api", "core", "core.features", "core.models", "core.rules"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "W"]
+# UP042: se usa `str, Enum` (y no `StrEnum`) para que Pydantic v2 serialice el
+#   valor del enumerado en la respuesta JSON.
+# N818: las excepciones llevan nombre en espanol, segun la convencion del
+#   proyecto (`TokenInvalido`, `ErrorDeArtefactos`, `ErrorApi`).
+# B008: `Depends(...)` en los parametros por defecto es el patron idiomatico
+#   de FastAPI para declarar dependencias.
+ignore = ["UP042", "N818", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N806"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = false
