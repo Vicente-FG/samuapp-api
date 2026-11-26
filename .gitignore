@@ -47,3 +47,15 @@ Thumbs.db
 # paso de construccion del despliegue ejecuta scripts/desempaquetar_modelos.py,
 # que los reconstruye y verifica su SHA-256 contra modelos/MANIFEST.json.
 # Las partes base64 SI se versionan: no se ignoran.
+#
+# Los binarios en claro son artefactos locales derivados: se reconstruyen
+# con `python -m scripts.desempaquetar_modelos` y no se versionan, para que
+# el repositorio no duplique 1,2 MB en dos formatos.
+modelos/*.joblib
+modelos/*.parquet
+
+# Copias de los artefactos que el equipo dejo en core/models/: el servicio lee
+# exclusivamente desde SAMUAPP_MODELOS_DIR (modelos/), asi que aqui son solo
+# archivos de trabajo locales y no se versionan.
+core/models/*.joblib
+core/models/*.parquet
