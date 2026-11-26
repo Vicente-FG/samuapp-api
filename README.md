@@ -346,6 +346,31 @@ con estos **nombres exactos**:
 | `tasa_global.json` | `{"tasa_global": <float>}` (opcionalmente `fecha` y `artifact_version`). |
 | `MANIFEST.json` | Checksums SHA-256 y tamanos de cada artefacto. |
 
+### Como viajan los binarios en el repositorio
+
+`.joblib` y `.parquet` son binarios y el repositorio no usa Git LFS. Para que el
+servicio se despliegue con los artefactos reales sin depender de un canal
+binario externo, el repositorio guarda ademas cada artefacto **codificado en
+base64 y dividido en partes** de hasta 120 KB:
+
+```
+modelos/b64/lgb_es_fatal_1_26M.joblib.b64.001
+modelos/b64/lgb_es_fatal_1_26M.joblib.b64.002
+...
+```
+
+El paso de construccion del despliegue ejecuta
+`python -m scripts.desempaquetar_modelos`, que concatena las partes, decodifica
+el base64, escribe el binario en `modelos/` y **verifica su SHA-256 contra
+`MANIFEST.json`**. Si el checksum no coincide, el despliegue falla de forma
+explícita en lugar de servir predicciones silenciosamente corruptas.
+
+El ciclo inverso, para volver a generar las partes tras cambiar un artefacto, es:
+
+```bash
+python -m scripts.codificar_modelos --directorio modelos --tamano-parte 120000
+```
+
 ### `features_xgb.joblib`
 
 Debe contener una **lista de 40 cadenas** con los nombres exactos de las
@@ -471,16 +496,18 @@ entrenamiento en todas las categorias que el entrenamiento reconocia.
 `render.yaml` define el web service:
 
 ```yaml
-buildCommand: pip install -r requirements.txt
+buildCommand: pip install -r requirements.txt && python -m scripts.desempaquetar_modelos --directorio modelos
 startCommand: uvicorn adapters.api.main:app --host 0.0.0.0 --port $PORT
 healthCheckPath: /api/v1/health
 ```
 
 Pasos sugeridos:
 
-1. Copiar esta carpeta dentro del repositorio git (por ejemplo `backend/`).
+1. Publicar esta carpeta en un repositorio git (por ejemplo `Vicente-FG/samuapp-api`).
 2. Subir los artefactos reales a `./modelos/` (se versionan, segun la
-   suposicion S1 del diseno).
+   suposicion S1 del diseno) y sus partes en `./modelos/b64/`, o regenerar las
+   partes con `scripts.codificar_modelos` para que el despliegue los reconstruya
+   automaticamente.
 3. Crear el servicio desde el blueprint de Render y configurar las variables de
    entorno (en especial `SAMUAPP_MODELOS_DIR`, `SAMUAPP_DB_PATH` y
    `SAMUAPP_CORS_ORIGENES`).

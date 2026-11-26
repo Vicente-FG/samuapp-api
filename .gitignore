@@ -41,3 +41,9 @@ Thumbs.db
 # NOTA: los artefactos del modelo (modelos/*.joblib) SI se versionan,
 # conforme a la suposicion S1 del diseño: son artefactos inmutables y
 # reproducibles del entrenamiento.
+#
+# Como son binarios y el repositorio no usa Git LFS, tambien se versionan
+# codificados en base64 y divididos en partes (modelos/b64/*.b64.NNN). El
+# paso de construccion del despliegue ejecuta scripts/desempaquetar_modelos.py,
+# que los reconstruye y verifica su SHA-256 contra modelos/MANIFEST.json.
+# Las partes base64 SI se versionan: no se ignoran.
