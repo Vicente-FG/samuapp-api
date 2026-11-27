@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import html
 import logging
+import sqlite3
 import threading
 import time
 import uuid
@@ -46,8 +47,10 @@ from adapters.api.auth import (
     crear_verificador,
     nivel_de_rol,
 )
+from adapters.api.sesion import calcular_expiracion, crear_token_dev, semilla_usuarios_demo
 from adapters.api.settings import Settings, configurar_logging, contexto_trace_id
 from adapters.api.store import PredictionStore, RegistroPrediccion, hash_payload
+from adapters.api.usuarios import UsuariosStore
 from core.contracts import (
     ConfirmacionEntregaPayload,
     DispatchRecommendation,
@@ -60,7 +63,10 @@ from core.contracts import (
     PrediccionPayload,
     RecomendacionPayload,
     ResumenPrediccionPayload,
+    RespuestaSesion,
     Siniestro,
+    SolicitudRegistro,
+    SolicitudSesion,
 )
 from core.features.schema import validar_siniestro
 from core.models.bundle import ErrorDeArtefactos, ModelBundle
@@ -355,6 +361,11 @@ def crear_app(settings: Settings | None = None) -> FastAPI:
         almacen = PredictionStore(configuracion.db_path)
         almacen.crear_tablas()
 
+        almacen_usuarios = UsuariosStore(configuracion.db_path)
+        almacen_usuarios.crear_tablas()
+        if configuracion.auth_mode == "dev":
+            semilla_usuarios_demo(almacen_usuarios)
+
         registro_modelos: ModelRegistry = ModelRegistryLocal(configuracion.modelos_dir)
         verificador = crear_verificador(
             configuracion.auth_mode,
@@ -364,6 +375,7 @@ def crear_app(settings: Settings | None = None) -> FastAPI:
 
         app.state.settings = configuracion
         app.state.store = almacen
+        app.state.usuarios = almacen_usuarios
         app.state.registry = registro_modelos
         app.state.verificador = verificador
         app.state.bundle = None
@@ -564,6 +576,100 @@ def crear_app(settings: Settings | None = None) -> FastAPI:
             semaforo.release()
 
     # --- rutas --------------------------------------------------------------
+
+    @app.post(
+        "/api/v1/auth/sesion",
+        response_model=RespuestaSesion,
+        status_code=200,
+        tags=["autenticacion"],
+    )
+    def iniciar_sesion(payload: SolicitudSesion, request: Request) -> RespuestaSesion:
+        """Inicia sesión y devuelve un token de identidad.
+
+        Solo existe en el modo de desarrollo: en producción el token lo emite
+        Firebase Authentication y la SPA lo obtiene con el SDK de Firebase.
+        El mensaje de error es generico (CA-01.5): no revela si el correo esta
+        registrado.
+        """
+        if configuracion.auth_mode != "dev":
+            raise ErrorApi(
+                "failed-precondition",
+                "El inicio de sesion esta delegado a Firebase Authentication: la SPA "
+                "debe obtener el ID token con el SDK de Firebase.",
+            )
+
+        almacen: UsuariosStore = app.state.usuarios
+        fila = almacen.buscar_por_correo(payload.correo)
+        if fila is None or not almacen.verificar_contrasena(
+            str(fila["uid"]), payload.contrasena
+        ):
+            logger.warning(
+                "Intento de inicio de sesion fallido",
+                extra={"evento": "sesion_fallida", "correo": payload.correo},
+            )
+            raise ErrorApi("unauthenticated", "Las credenciales no son validas.")
+
+        uid = str(fila["uid"])
+        rol = Rol(str(fila["rol"]))
+        return RespuestaSesion(
+            token=crear_token_dev(uid, rol),
+            uid=uid,
+            rol=rol,
+            correo=str(fila["correo"]),
+            nombre=str(fila["nombre"]),
+            expiraEn=calcular_expiracion(configuracion.sesion_ttl_minutos),
+            modo="dev",
+        )
+
+    @app.post(
+        "/api/v1/auth/registro",
+        response_model=RespuestaSesion,
+        status_code=200,
+        tags=["autenticacion"],
+    )
+    def registrar_usuario(payload: SolicitudRegistro, request: Request) -> RespuestaSesion:
+        """Registra un operador nuevo y devuelve su token de identidad.
+
+        La longitud minima de la contraseña (12 caracteres) la impone el
+        esquema antes de llegar aqui (CA-01.3). Si el correo ya existe, la
+        respuesta es la misma que ante cualquier otro fallo (CA-01.2): no se
+        revela la existencia de la cuenta.
+        """
+        if configuracion.auth_mode != "dev":
+            raise ErrorApi(
+                "failed-precondition",
+                "El registro esta delegado a Firebase Authentication: la SPA debe "
+                "usar el SDK de Firebase para crear la cuenta.",
+            )
+
+        almacen: UsuariosStore = app.state.usuarios
+        mensaje_generico = "No fue posible completar el registro con los datos ingresados."
+        if almacen.buscar_por_correo(payload.correo) is not None:
+            raise ErrorApi("invalid-argument", mensaje_generico)
+
+        try:
+            uid = almacen.crear(
+                payload.nombre,
+                payload.correo,
+                payload.contrasena,
+                payload.rol.value,
+            )
+        except sqlite3.IntegrityError:
+            raise ErrorApi("invalid-argument", mensaje_generico) from None
+
+        logger.info(
+            "Operador registrado",
+            extra={"evento": "registro_usuario", "rol": payload.rol.value, "uid": uid},
+        )
+        return RespuestaSesion(
+            token=crear_token_dev(uid, payload.rol),
+            uid=uid,
+            rol=payload.rol,
+            correo=payload.correo,
+            nombre=payload.nombre,
+            expiraEn=calcular_expiracion(configuracion.sesion_ttl_minutos),
+            modo="dev",
+        )
 
     @app.get("/api/v1/health", response_model=EstadoSaludPayload, tags=["operacion"])
     def health(request: Request) -> EstadoSaludPayload:

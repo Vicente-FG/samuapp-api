@@ -12,6 +12,7 @@ Toda la configuración se lee de variables de entorno con prefijo `SAMUAPP_`:
 | `SAMUAPP_VERSION_CODIGO`    | `0.1.0`            | Versión de código persistida.          |
 | `SAMUAPP_LOG_LEVEL`         | `INFO`             | Nivel de los logs JSON.                |
 | `SAMUAPP_CORS_ORIGENES`     | *(vacío)*          | Origenes CORS separados por coma.      |
+| `SAMUAPP_SESION_TTL_MINUTOS`| `480`              | Duración del token en modo `dev`.      |
 
 Ningun secreto se lee ni se registra: los tokens se enmascaran antes de
 escribirlos en el log.
@@ -137,6 +138,8 @@ class Settings(BaseSettings):
     firebase_project_id: str | None = None
     #: Verifica la revocacion del token de Firebase en cada peticion.
     firebase_check_revocado: bool = True
+    #: Duracion del token emitido por el modo de desarrollo, en minutos.
+    sesion_ttl_minutos: int = 480
     #: Número de inferencias concurrentes admitidas antes de responder 429.
     max_concurrencia: int = 32
     #: Exige un token valido para consultar el endpoint de salud.

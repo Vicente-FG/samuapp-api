@@ -20,7 +20,8 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
+
+from core.contracts import NIVELES_ROL, Rol
 
 __all__ = [
     "ROL_NIVELES",
@@ -38,22 +39,10 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-
-class Rol(str, Enum):
-    """Roles del modelo de control de acceso (§4.10 del documento de Etapa 3)."""
-
-    OPERADOR = "operador"
-    SUPERVISOR = "supervisor"
-    ADMIN = "admin"
-
-
 #: Nivel jerarquico de cada rol: el supervisor hereda del operador y el admin
-#: hereda del supervisor.
-ROL_NIVELES: dict[Rol, int] = {
-    Rol.OPERADOR: 1,
-    Rol.SUPERVISOR: 2,
-    Rol.ADMIN: 3,
-}
+#: hereda del supervisor. Se define en el nucleo de dominio (`core.contracts`)
+#: porque el modelo de roles es un concepto de negocio, no de la plataforma.
+ROL_NIVELES: dict[Rol, int] = NIVELES_ROL
 
 
 def nivel_de_rol(rol: Rol) -> int:

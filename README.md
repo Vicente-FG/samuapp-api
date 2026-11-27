@@ -49,6 +49,8 @@ backend-staging/
 |   `-- api/
 |       |-- main.py               # aplicacion FastAPI y rutas
 |       |-- auth.py               # verificacion de token (Bearer) y roles
+|       |-- sesion.py             # emision de tokens y usuarios de demostracion
+|       |-- usuarios.py           # almacen de usuarios (modo de desarrollo)
 |       |-- settings.py           # configuracion y logging JSON
 |       `-- store.py              # repositorio de predicciones (SQLite)
 |-- scripts/
@@ -121,9 +123,25 @@ Todas las variables se leen con prefijo `SAMUAPP_` (ver `.env.example`).
 | `SAMUAPP_FIREBASE_CHECK_REVOCADO` | `true` | Verifica la revocacion del token de Firebase. |
 | `SAMUAPP_MAX_CONCURRENCIA` | `32` | Inferencias concurrentes antes de responder 429. |
 | `SAMUAPP_HEALTH_REQUIERE_TOKEN` | `false` | Exige token valido en `/api/v1/health`. |
+| `SAMUAPP_SESION_TTL_MINUTOS` | `480` | Duracion del token emitido en modo `dev`. |
 
 `SAMUAPP_AUTH_MODE` es **`firebase` por defecto**: el modo `dev` solo debe
-usarse en desarrollo local y en las pruebas.
+usarse en desarrollo local, en las pruebas y en el despliegue de demostracion
+del proyecto, donde no hay un proyecto de Firebase configurado.
+
+### Los dos modos de identidad
+
+| Modo | Quien emite el token | Cuando usarlo |
+| --- | --- | --- |
+| `firebase` | Identity Platform. El servicio solo lo verifica. | Produccion. Requiere `firebase-admin` y credenciales de servicio. |
+| `dev` | El propio servicio, con la forma `dev:<rol>:<uid>`. | Desarrollo, pruebas y despliegue de demostracion. |
+
+En modo `dev` el servicio siembra tres cuentas de prueba
+(`operador@`, `supervisor@` y `admin@samuapp.cl`, todos con la contraseña
+`Samuapp2026!`) y ofrece `POST /api/v1/auth/sesion` y
+`POST /api/v1/auth/registro`. En modo `firebase` esas dos rutas responden
+`failed-precondition` (412): el token lo emite el SDK de Firebase en el
+navegador, no el servicio.
 
 ---
 
@@ -185,6 +203,8 @@ Response 200:
 
 | Endpoint | Metodo | Rol |
 | --- | --- | --- |
+| `/api/v1/auth/sesion` | POST | publico (solo en modo `dev`) |
+| `/api/v1/auth/registro` | POST | publico (solo en modo `dev`) |
 | `/api/v1/health` | GET | interno |
 | `/api/v1/predictions` | GET | supervisor, admin (listado paginado) |
 | `/api/v1/predictions/{id}` | GET | propietario, supervisor, admin |
@@ -195,6 +215,44 @@ Response 200:
 El listado acepta los filtros `operatorUid`, `comuna`, `fechaDesde`,
 `fechaHasta`, `limit` y `offset`, y responde `{"items", "total", "limit",
 "offset"}`.
+
+### 4.2.1 `POST /api/v1/auth/sesion` y `POST /api/v1/auth/registro`
+
+Solo existen en el modo `dev` (ver seccion 3). El cuerpo de la sesion es
+`{"correo", "contrasena"}` y el del registro es `{"nombre", "correo",
+"contrasena", "rol"}`, con `rol` en `operador`, `supervisor` o `admin`.
+
+La respuesta es la misma en ambos casos:
+
+```json
+{
+  "token": "dev:operador:op_1a2b3c4d",
+  "uid": "op_1a2b3c4d",
+  "rol": "operador",
+  "correo": "operador@samuapp.cl",
+  "nombre": "Operador de demostracion",
+  "expiraEn": 1795767389099,
+  "modo": "dev"
+}
+```
+
+El `token` es el valor que la SPA envia despues en `Authorization: Bearer`.
+El `uid` y el `rol` provienen del token emitido, nunca del cuerpo de la
+peticion.
+
+Reglas de seguridad que apply:
+
+- La contraseña exige **12 caracteres como minimo** (CA-01.3); el esquema lo
+  rechaza antes de llegar al almacen.
+- Las contraseñas no se guardan en claro: se derivan con
+  PBKDF2-HMAC-SHA256 y sal aleatoria por usuario.
+- El mensaje de credenciales invalidas es **generico** y no revela si el
+  correo esta registrado (CA-01.5).
+- El mensaje de correo duplicado es el mismo que ante cualquier otro fallo de
+  registro (CA-01.2).
+- El registro no es una via de produccion: no implementa verificacion de
+  correo, recuperacion de contraseña ni revocacion. En produccion eso lo
+  aporta Firebase Authentication.
 
 ### 4.3 Errores
 

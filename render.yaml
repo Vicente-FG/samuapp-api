@@ -15,17 +15,31 @@ services:
         value: ./modelos/
       - key: SAMUAPP_DB_PATH
         value: ./data/predicciones.db
+      # Modo de identidad.
+      #
+      # `dev` es el modo de DEMOSTRACION: el servicio emite sus propios tokens
+      # (`dev:<rol>:<uid>`) y siembra tres cuentas de prueba. Es lo que permite
+      # probar la SPA sin configurar un proyecto de Firebase.
+      #
+      # `firebase` es el modo de PRODUCCION: el token lo emite Identity Platform
+      # y el servicio lo verifica en cada peticion. Requiere instalar
+      # `firebase-admin` y entregar las credenciales por el gestor de secretos
+      # de Render. Sin ellas, las rutas protegidas responden 503.
       - key: SAMUAPP_AUTH_MODE
-        value: firebase
+        value: dev
+      - key: SAMUAPP_SESION_TTL_MINUTOS
+        value: "480"
       - key: SAMUAPP_MODO_DEGRADADO
         value: "false"
       - key: SAMUAPP_TIMEOUT_MS
         value: "2000"
       - key: SAMUAPP_VERSION_CODIGO
-        value: 0.1.0
+        value: 0.2.0
       - key: SAMUAPP_LOG_LEVEL
         value: INFO
+      # Origenes CORS separados por coma. Debe incluir el dominio del sitio
+      # estatico de la SPA.
       - key: SAMUAPP_CORS_ORIGENES
-        value: ""
+        value: https://samuapp-front.onrender.com
       - key: PYTHON_VERSION
         value: "3.12.10"

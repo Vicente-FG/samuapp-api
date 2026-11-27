@@ -32,4 +32,4 @@ Los checksums esperados están en `modelos/MANIFEST.json`:
 | `lgb_victimas_graves_1_26M.joblib` | `520af81825dc3faea885ca5f709b15401c28e6483709fdc151494d0f0d4e7290` |
 | `features_xgb.joblib` | `16f0225ba3f78da9e68624ef6fb51842c0c7dd21589680617760bbfafdfd58f7` |
 | `encodings.parquet` | `443c45e122e1804733994d77250c3ea90da2c9631c23db79eed8fab61e5a5932` |
-| `tasa_global.json` | `2573fe7fef3b91153fffb6a899254b8cdd7705ac715bed5b620baa5c6486255d` |
+| `tasa_global.json` | `36c36f01b4badecee22f7d6cc23f3bec3dbc64793a512d19bf804d48b974b8e0` |

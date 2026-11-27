@@ -29,12 +29,17 @@ __all__ = [
     "ModeloActualPayload",
     "ModoPrediccion",
     "NivelAlerta",
+    "NIVELES_ROL",
     "PayloadPrediccion",
     "PrediccionDetallePayload",
     "PrediccionPayload",
     "ResumenPrediccionPayload",
+    "RespuestaSesion",
+    "Rol",
     "Sexo",
     "Siniestro",
+    "SolicitudRegistro",
+    "SolicitudSesion",
 ]
 
 
@@ -305,3 +310,82 @@ class ConfirmacionEntregaPayload(BaseModel):
     recibido: bool
     ack_at: str = Field(alias="ackAt")
     ack_by: str = Field(alias="ackBy")
+
+
+class Rol(str, Enum):
+    """Roles del modelo de control de acceso (§4.10)."""
+
+    OPERADOR = "operador"
+    SUPERVISOR = "supervisor"
+    ADMIN = "admin"
+
+
+#: Nivel jerarquico de cada rol: el supervisor hereda del operador y el admin
+#: hereda del supervisor.
+NIVELES_ROL: dict[Rol, int] = {
+    Rol.OPERADOR: 1,
+    Rol.SUPERVISOR: 2,
+    Rol.ADMIN: 3,
+}
+
+
+class SolicitudSesion(BaseModel):
+    """Cuerpo de `POST /api/v1/auth/sesion`.
+
+    La longitud minima de la contrasena es la de §4.10 (CA-01.3): 12
+    caracteres. El servicio no valida si el correo existe, porque esa
+    informacion revelaria la existencia de la cuenta (CA-01.5).
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    correo: str = Field(min_length=3, max_length=254)
+    contrasena: str = Field(min_length=12, max_length=128)
+
+    @field_validator("correo")
+    @classmethod
+    def _normalizar_correo(cls, valor: str) -> str:
+        """Recorta el correo y lo lleva a minusculas."""
+        return valor.strip().lower()
+
+
+class SolicitudRegistro(BaseModel):
+    """Cuerpo de `POST /api/v1/auth/registro`."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    nombre: str = Field(min_length=2, max_length=120)
+    correo: str = Field(min_length=3, max_length=254)
+    contrasena: str = Field(min_length=12, max_length=128)
+    rol: Rol = Rol.OPERADOR
+
+    @field_validator("nombre")
+    @classmethod
+    def _recortar_nombre(cls, valor: str) -> str:
+        """Recorta el nombre del operador."""
+        return " ".join(valor.split())
+
+    @field_validator("correo")
+    @classmethod
+    def _normalizar_correo(cls, valor: str) -> str:
+        """Recorta el correo y lo lleva a minusculas."""
+        return valor.strip().lower()
+
+
+class RespuestaSesion(BaseModel):
+    """Respuesta de `POST /api/v1/auth/sesion` y de `POST /api/v1/auth/registro`.
+
+    El `token` es el valor que la SPA envia despues en la cabecera
+    `Authorization: Bearer <token>`. El `uid` y el `rol` provienen del token
+    verificado en el servidor, nunca del cuerpo de la peticion.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    token: str
+    uid: str
+    rol: Rol
+    correo: str
+    nombre: str | None = None
+    expira_en: int = Field(alias="expiraEn")
+    modo: str = "dev"
