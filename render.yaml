@@ -4,7 +4,11 @@ services:
   - type: web
     name: samuapp-backend
     runtime: python
-    plan: starter
+    # `free` (0,1 CPU, 512 MB) para la demostracion: no exige tarjeta y la
+    # instancia se apaga tras 15 minutos de inactividad. Para produccion
+    # cambiar a `starter` (US$7/mes), que mantiene el servicio siempre
+    # activo y evita el arranque en frio (riesgos R-01 y R-11).
+    plan: free
     region: oregon
     buildCommand: pip install -r requirements.txt && python -m scripts.desempaquetar_modelos --directorio modelos
     startCommand: uvicorn adapters.api.main:app --host 0.0.0.0 --port $PORT
